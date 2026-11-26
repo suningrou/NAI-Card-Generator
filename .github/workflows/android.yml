@@ -1,0 +1,46 @@
+
+name: Build NAI Card Generator APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "*.zip"
+      - ".github/workflows/android.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Unzip project
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" -print -quit)
+          test -n "$ZIP_FILE"
+          mkdir unpacked
+          unzip "$ZIP_FILE" -d unpacked
+          find unpacked -name build.gradle -print
+
+      - name: Build APK
+        run: |
+          PROJECT=$(dirname "$(find unpacked -name build.gradle | head -n 1)")
+          gradle -p "$PROJECT" assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NAI-Card-Generator-APK
+          path: unpacked/**/build/outputs/apk/debug/*.apk
